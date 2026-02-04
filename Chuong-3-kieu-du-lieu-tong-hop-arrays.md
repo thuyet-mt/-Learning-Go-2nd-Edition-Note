@@ -1232,7 +1232,7 @@ Các bài tập sau sẽ kiểm tra kiến thức của bạn về các kiểu d
 
 ---
 
-### Tổng kết
+## Tổng kết
 
 Bạn đã học được rất nhiều về các kiểu dữ liệu composite trong Go. Ngoài việc hiểu rõ hơn về string, bạn còn biết cách sử dụng các kiểu container dựng sẵn có hỗ trợ generic: slice và map. Bạn cũng đã biết cách tự xây dựng các kiểu dữ liệu composite của riêng mình thông qua struct.
 
