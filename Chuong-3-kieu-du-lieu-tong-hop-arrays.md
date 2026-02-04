@@ -785,3 +785,455 @@ Các dạng encoding:
 
 Trong chương tiếp theo, bạn sẽ học cách dùng `for-range` để duyệt code point một cách an toàn.
 
+## Maps
+
+Slices rất hữu ích khi bạn có dữ liệu tuần tự. Giống như hầu hết các ngôn ngữ khác, Go cung cấp một kiểu dữ liệu dựng sẵn cho những tình huống mà bạn muốn liên kết một giá trị với một giá trị khác. Kiểu map được viết dưới dạng `map[keyType]valueType`. Hãy cùng xem một vài cách khai báo map.
+
+Trước tiên, bạn có thể dùng khai báo `var` để tạo một biến map được gán giá trị zero của nó:
+
+```go
+var nilMap map[string]int
+```
+
+Trong trường hợp này, `nilMap` được khai báo là một map với key kiểu `string` và value kiểu `int`. Giá trị zero của map là `nil`. Một map `nil` có độ dài bằng 0. Việc đọc từ một map `nil` luôn trả về giá trị zero của kiểu value của map. Tuy nhiên, nếu cố ghi dữ liệu vào một biến map `nil` thì chương trình sẽ panic.
+
+Bạn có thể dùng khai báo `:=` để tạo một biến map bằng cách gán cho nó một map literal:
+
+```go
+totalWins := map[string]int{}
+```
+
+Ở đây, bạn đang dùng một map literal rỗng. Điều này **không giống** với một map `nil`. Nó có độ dài bằng 0, nhưng bạn có thể đọc và ghi dữ liệu vào một map được gán bằng map literal rỗng. Dưới đây là một ví dụ về map literal không rỗng:
+
+```go
+teams := map[string][]string{
+    "Orcas":   []string{"Fred", "Ralph", "Bijou"},
+    "Lions":   []string{"Sarah", "Peter", "Billie"},
+    "Kittens": []string{"Waldo", "Raul", "Ze"},
+}
+```
+
+Phần thân của một map literal được viết bằng key, theo sau là dấu hai chấm (`:`), rồi đến value. Mỗi cặp key–value được phân tách bằng dấu phẩy, kể cả dòng cuối cùng. Trong ví dụ này, value là một slice các chuỗi. Kiểu của value trong map có thể là bất cứ thứ gì. Tuy nhiên, kiểu của key có một số hạn chế, sẽ được nói đến sau.
+
+Nếu bạn biết trước số lượng cặp key–value mà bạn sẽ đưa vào map nhưng chưa biết giá trị cụ thể, bạn có thể dùng `make` để tạo map với kích thước ban đầu:
+
+```go
+ages := make(map[int][]string, 10)
+```
+
+Các map được tạo bằng `make` vẫn có độ dài bằng 0, và chúng có thể tự động mở rộng vượt quá kích thước ban đầu đã chỉ định.
+
+Maps giống slices ở một số điểm:
+
+* Maps tự động mở rộng khi bạn thêm các cặp key–value.
+* Nếu bạn biết số lượng cặp key–value sẽ chèn vào map, bạn có thể dùng `make` để tạo map với kích thước ban đầu cụ thể.
+* Truyền một map vào hàm `len` sẽ cho bạn biết số lượng cặp key–value trong map.
+* Giá trị zero của map là `nil`.
+* Maps **không thể so sánh**. Bạn có thể kiểm tra xem chúng có bằng `nil` hay không, nhưng bạn không thể dùng `==` để kiểm tra hai map có cùng key và value hay dùng `!=` để kiểm tra sự khác nhau.
+
+Key của map có thể là bất kỳ kiểu nào **có thể so sánh được**. Điều này có nghĩa là bạn **không thể** dùng slice hoặc map làm key của một map khác.
+
+> **TIP**
+> Khi nào nên dùng map, và khi nào nên dùng slice?
+> Bạn nên dùng slice cho các danh sách dữ liệu khi dữ liệu cần được xử lý tuần tự hoặc khi thứ tự của các phần tử là quan trọng.
+>
+> Map hữu ích khi bạn cần tổ chức các giá trị dựa trên một thứ gì đó **không phải** là một số nguyên tăng dần, chẳng hạn như tên.
+
+---
+
+### Map băm (Hash Map) là gì?
+
+Trong khoa học máy tính, map là một cấu trúc dữ liệu dùng để liên kết (hoặc ánh xạ) một giá trị với một giá trị khác. Map có thể được cài đặt theo nhiều cách khác nhau, mỗi cách có những đánh đổi riêng. Map được tích hợp sẵn trong Go là một **hash map** (hay **hash table**).
+
+Nếu bạn chưa quen với khái niệm này, Chương 5 của cuốn *Grokking Algorithms* (Aditya Bhargava, Manning) mô tả hash table là gì và vì sao chúng lại hữu ích đến vậy.
+
+Việc Go cung cấp sẵn một cài đặt hash map trong runtime là rất tuyệt vời, bởi vì tự xây dựng một hash map đúng đắn là việc khá khó. Nếu bạn muốn tìm hiểu sâu hơn về cách Go hiện thực map, hãy xem bài nói chuyện **“Inside the Map Implementation”** tại GopherCon 2016 của Keith Randall.
+
+Go không yêu cầu (và thậm chí không cho phép) bạn tự định nghĩa thuật toán băm hay cách so sánh bằng nhau. Thay vào đó, Go runtime được biên dịch vào mỗi chương trình Go đã chứa sẵn mã cài đặt các thuật toán băm cho mọi kiểu được phép làm key.
+
+---
+
+### Đọc và ghi Map
+
+Hãy xem một chương trình ngắn khai báo, ghi và đọc dữ liệu từ map. Bạn có thể chạy chương trình trong Ví dụ 3-10 trên Go Playground hoặc trong thư mục `sample_code/map_read_write` của Chapter 3.
+
+**Ví dụ 3-10. Sử dụng map**
+
+```go
+totalWins := map[string]int{}
+totalWins["Orcas"] = 1
+totalWins["Lions"] = 2
+fmt.Println(totalWins["Orcas"])
+fmt.Println(totalWins["Kittens"])
+totalWins["Kittens"]++
+fmt.Println(totalWins["Kittens"])
+totalWins["Lions"] = 3
+fmt.Println(totalWins["Lions"])
+```
+
+Khi chạy chương trình, bạn sẽ thấy kết quả sau:
+
+```
+1
+0
+1
+3
+```
+
+Bạn gán giá trị cho một key trong map bằng cách đặt key trong dấu ngoặc vuông và dùng `=` để chỉ định giá trị. Bạn đọc giá trị của một key cũng bằng cách đặt key trong dấu ngoặc vuông. Lưu ý rằng bạn **không thể** dùng `:=` để gán giá trị cho một key trong map.
+
+Khi bạn đọc giá trị của một key chưa từng được gán, map sẽ trả về **giá trị zero** của kiểu value. Trong ví dụ này, kiểu value là `int`, nên bạn nhận được `0`. Bạn có thể dùng toán tử `++` để tăng giá trị số của một key trong map. Vì map mặc định trả về giá trị zero, nên điều này vẫn hoạt động ngay cả khi trước đó key chưa tồn tại.
+
+---
+
+### Idiom “comma ok”
+
+Như bạn đã thấy, map trả về giá trị zero khi bạn truy cập một key không tồn tại. Điều này rất tiện khi triển khai các bộ đếm như `totalWins`. Tuy nhiên, đôi khi bạn cần biết **liệu một key có tồn tại trong map hay không**. Go cung cấp idiom *comma ok* để phân biệt giữa một key có giá trị zero và một key không tồn tại:
+
+```go
+m := map[string]int{
+    "hello": 5,
+    "world": 0,
+}
+v, ok := m["hello"]
+fmt.Println(v, ok)
+
+v, ok = m["world"]
+fmt.Println(v, ok)
+
+v, ok = m["goodbye"]
+fmt.Println(v, ok)
+```
+
+Thay vì gán kết quả đọc map cho một biến duy nhất, với idiom *comma ok* bạn gán cho **hai biến**. Biến thứ nhất nhận giá trị gắn với key. Biến thứ hai là một giá trị `bool`, thường được đặt tên là `ok`. Nếu `ok` là `true`, key tồn tại trong map. Nếu `ok` là `false`, key không tồn tại. Trong ví dụ này, chương trình in ra: `5 true`, `0 true`, và `0 false`.
+
+> **NOTE**
+> Idiom *comma ok* được dùng trong Go khi bạn muốn phân biệt giữa việc đọc được giá trị thực sự và việc nhận về giá trị zero. Bạn sẽ gặp lại nó khi đọc từ channel trong Chapter 12 và khi dùng type assertion trong Chapter 7.
+
+---
+
+### Xóa phần tử khỏi Map
+
+Các cặp key–value được xóa khỏi map bằng hàm dựng sẵn `delete`:
+
+```go
+m := map[string]int{
+    "hello": 5,
+    "world": 10,
+}
+delete(m, "hello")
+```
+
+Hàm `delete` nhận vào một map và một key, rồi xóa cặp key–value tương ứng. Nếu key không tồn tại trong map hoặc map là `nil`, thì không có gì xảy ra. Hàm `delete` không trả về giá trị nào.
+
+---
+
+### Làm rỗng Map
+
+Hàm `clear` mà bạn đã thấy trong phần “Làm rỗng Slice” cũng hoạt động với map. Một map sau khi được clear sẽ có độ dài bằng 0 (khác với slice). Đoạn code sau:
+
+```go
+m := map[string]int{
+    "hello": 5,
+    "world": 10,
+}
+fmt.Println(m, len(m))
+clear(m)
+fmt.Println(m, len(m))
+```
+
+sẽ in ra:
+
+```
+map[hello:5 world:10] 2
+map[] 0
+```
+
+---
+
+### So sánh Map
+
+Go 1.21 đã thêm một package mới vào thư viện chuẩn tên là `maps`, chứa các hàm hỗ trợ làm việc với map. Bạn sẽ tìm hiểu thêm về package này trong phần “Adding Generics to the Standard Library”. Hai hàm hữu ích để so sánh hai map có bằng nhau hay không là `maps.Equal` và `maps.EqualFunc`, tương tự như `slices.Equal` và `slices.EqualFunc`:
+
+```go
+m := map[string]int{
+    "hello": 5,
+    "world": 10,
+}
+n := map[string]int{
+    "world": 10,
+    "hello": 5,
+}
+fmt.Println(maps.Equal(m, n)) // in ra true
+```
+
+---
+
+### Dùng Map như Set
+
+Nhiều ngôn ngữ có kiểu dữ liệu `set` trong thư viện chuẩn. Set đảm bảo rằng mỗi giá trị chỉ xuất hiện tối đa một lần, nhưng không đảm bảo thứ tự. Việc kiểm tra một phần tử có nằm trong set hay không là rất nhanh, bất kể set có bao nhiêu phần tử. (Trong khi đó, kiểm tra trong slice sẽ chậm dần khi slice lớn lên.)
+
+Go không có sẵn kiểu `set`, nhưng bạn có thể dùng map để mô phỏng một số tính năng của nó. Hãy dùng key của map làm kiểu dữ liệu bạn muốn đưa vào set và dùng `bool` làm value. Ví dụ 3-11 minh họa ý tưởng này.
+
+**Ví dụ 3-11. Sử dụng map như một set**
+
+```go
+intSet := map[int]bool{}
+vals := []int{5, 10, 2, 5, 8, 7, 3, 9, 1, 2, 10}
+for _, v := range vals {
+    intSet[v] = true
+}
+fmt.Println(len(vals), len(intSet))
+fmt.Println(intSet[5])
+fmt.Println(intSet[500])
+if intSet[100] {
+    fmt.Println("100 is in the set")
+}
+```
+
+Bạn muốn một set các số nguyên, nên bạn tạo một map với key kiểu `int` và value kiểu `bool`. Bạn lặp qua các giá trị trong `vals` bằng vòng lặp `for-range` (sẽ được nói trong phần “The for-range Statement”) và đưa chúng vào `intSet`, gán mỗi số nguyên với giá trị `true`.
+
+Bạn đã ghi 11 giá trị vào `intSet`, nhưng độ dài của `intSet` chỉ là 8, vì map không thể có key trùng lặp. Khi bạn kiểm tra `5` trong `intSet`, kết quả là `true` vì có key bằng 5. Tuy nhiên, khi kiểm tra `500` hoặc `100`, kết quả là `false`. Điều này xảy ra vì bạn chưa đưa các giá trị đó vào `intSet`, khiến map trả về giá trị zero của kiểu `bool`, mà giá trị zero của `bool` là `false`.
+
+Nếu bạn cần các phép toán trên set như hợp (union), giao (intersection) hay hiệu (subtraction), bạn có thể tự cài đặt hoặc dùng một trong nhiều thư viện bên thứ ba có sẵn. (Bạn sẽ tìm hiểu thêm về việc dùng thư viện bên thứ ba trong Chapter 10.)
+
+> **NOTE**
+> Một số người thích dùng `struct{}` làm value khi map được dùng để cài đặt set. (Struct sẽ được nói trong phần tiếp theo.) Ưu điểm là một struct rỗng chiếm 0 byte bộ nhớ, trong khi một `bool` chiếm 1 byte.
+>
+> Nhược điểm là việc dùng `struct{}` làm code trở nên rườm rà hơn. Cách gán giá trị kém trực quan hơn, và bạn cần dùng idiom *comma ok* để kiểm tra một giá trị có nằm trong set hay không:
+>
+> ```go
+> intSet := map[int]struct{}{}
+> vals := []int{5, 10, 2, 5, 8, 7, 3, 9, 1, 2, 10}
+> for _, v := range vals {
+>     intSet[v] = struct{}{}
+> }
+> if _, ok := intSet[5]; ok {
+>     fmt.Println("5 is in the set")
+> }
+> ```
+>
+> Trừ khi bạn có các set rất lớn, sự khác biệt về bộ nhớ thường không đủ đáng kể để bù đắp cho những nhược điểm này.
+
+## Structs
+
+Map là một cách tiện lợi để lưu trữ một số loại dữ liệu, nhưng chúng cũng có những hạn chế. Map không định nghĩa được một API, vì không có cách nào để giới hạn map chỉ cho phép một tập key nhất định. Ngoài ra, tất cả các value trong map phải có cùng một kiểu. Vì những lý do này, map không phải là cách lý tưởng để truyền dữ liệu từ hàm này sang hàm khác. Khi bạn có các dữ liệu liên quan và muốn gom chúng lại với nhau, bạn nên định nghĩa một struct.
+
+> **NOTE**
+> Nếu bạn đã quen với một ngôn ngữ hướng đối tượng, bạn có thể thắc mắc sự khác biệt giữa class và struct là gì. Câu trả lời rất đơn giản: Go không có class, vì Go không có cơ chế kế thừa. Điều này không có nghĩa là Go thiếu các đặc tính của lập trình hướng đối tượng, mà chỉ là Go tiếp cận chúng theo cách khác. Bạn sẽ tìm hiểu thêm về các đặc điểm hướng đối tượng của Go trong Chapter 7.
+
+Hầu hết các ngôn ngữ đều có một khái niệm tương tự struct, và cú pháp mà Go dùng để đọc và ghi struct sẽ khá quen thuộc:
+
+```go
+type person struct {
+    name string
+    age  int
+    pet  string
+}
+```
+
+Một kiểu struct được định nghĩa bằng từ khóa `type`, tên kiểu struct, từ khóa `struct`, và một cặp dấu ngoặc nhọn (`{}`). Bên trong ngoặc, bạn liệt kê các field của struct. Tương tự như khai báo biến với `var`, bạn viết tên field trước và kiểu của field sau. Lưu ý rằng, khác với map literal, **không có dấu phẩy** ngăn cách các field trong phần khai báo struct.
+
+Bạn có thể định nghĩa một kiểu struct bên trong hoặc bên ngoài một hàm. Một kiểu struct được định nghĩa bên trong hàm chỉ có thể được sử dụng trong phạm vi hàm đó. (Bạn sẽ tìm hiểu thêm về hàm trong Chapter 5.)
+
+> **NOTE**
+> Về mặt kỹ thuật, bạn có thể giới hạn phạm vi của định nghĩa struct ở bất kỳ mức block nào. Bạn sẽ tìm hiểu thêm về block trong Chapter 4.
+
+Khi một kiểu struct đã được khai báo, bạn có thể tạo biến thuộc kiểu đó:
+
+```go
+var fred person
+```
+
+Ở đây ta dùng khai báo `var`. Vì không gán giá trị cho `fred`, nó sẽ nhận **giá trị zero** của kiểu struct `person`. Một struct ở giá trị zero có tất cả các field được gán giá trị zero tương ứng với kiểu của field đó.
+
+Bạn cũng có thể gán một struct literal cho biến:
+
+```go
+bob := person{}
+```
+
+Khác với map, không có sự khác biệt giữa việc gán một struct literal rỗng và việc không gán giá trị gì cả. Cả hai cách đều khởi tạo tất cả các field của struct về giá trị zero. Có hai cách để khởi tạo struct literal không rỗng.
+
+Cách thứ nhất là cung cấp một danh sách các giá trị, phân tách bằng dấu phẩy, tương ứng với các field trong struct:
+
+```go
+julia := person{
+    "Julia",
+    40,
+    "cat",
+}
+```
+
+Khi dùng kiểu struct literal này, bạn **bắt buộc** phải cung cấp giá trị cho tất cả các field trong struct, và các giá trị sẽ được gán theo đúng **thứ tự** các field được khai báo trong định nghĩa struct.
+
+Cách thứ hai trông giống với map literal:
+
+```go
+beth := person{
+    age:  30,
+    name: "Beth",
+}
+```
+
+Bạn sử dụng tên field để chỉ định giá trị. Cách này có một số ưu điểm: bạn có thể chỉ định field theo bất kỳ thứ tự nào, và bạn không cần phải cung cấp giá trị cho tất cả các field. Những field không được chỉ định sẽ nhận giá trị zero.
+
+Bạn **không thể trộn lẫn** hai kiểu struct literal: hoặc là tất cả các field đều có tên, hoặc là không field nào có tên. Với các struct nhỏ, nơi mọi field luôn được khởi tạo, kiểu không dùng tên field là đủ đơn giản. Trong các trường hợp khác, bạn nên dùng kiểu có tên field. Dù dài dòng hơn, nhưng nó giúp code rõ ràng hơn: bạn biết chính xác giá trị nào được gán cho field nào mà không cần nhìn lại định nghĩa struct. Nó cũng dễ bảo trì hơn. Nếu bạn khởi tạo struct mà không dùng tên field, và sau này struct được bổ sung thêm field mới, code của bạn sẽ **không biên dịch được**.
+
+Một field trong struct được truy cập bằng ký hiệu dấu chấm:
+
+```go
+bob.name = "Bob"
+fmt.Println(bob.name)
+```
+
+Cũng giống như bạn dùng dấu ngoặc vuông để đọc và ghi map, bạn dùng ký hiệu dấu chấm để đọc và ghi các field của struct.
+
+---
+
+### Struct Ẩn Danh (Anonymous Struct)
+
+Bạn cũng có thể khai báo một biến với một kiểu struct mà không cần đặt tên cho kiểu đó. Điều này được gọi là **anonymous struct**:
+
+```go
+var person struct {
+    name string
+    age  int
+    pet  string
+}
+
+person.name = "bob"
+person.age = 50
+person.pet = "dog"
+```
+
+Bạn cũng có thể khởi tạo anonymous struct bằng struct literal:
+
+```go
+pet := struct {
+    name string
+    kind string
+}{
+    name: "Fido",
+    kind: "dog",
+}
+```
+
+Trong ví dụ này, kiểu của các biến `person` và `pet` là anonymous struct. Bạn gán và đọc các field của anonymous struct giống hệt như với struct có tên. Tương tự, bạn cũng có thể khởi tạo một instance của anonymous struct bằng struct literal.
+
+Bạn có thể thắc mắc khi nào thì một kiểu dữ liệu chỉ gắn với duy nhất một instance lại hữu ích. Anonymous struct thường được dùng trong hai tình huống phổ biến.
+
+Trường hợp thứ nhất là khi bạn chuyển đổi dữ liệu bên ngoài sang struct hoặc ngược lại (ví dụ như JSON hoặc Protocol Buffers). Quá trình này lần lượt được gọi là **unmarshaling** và **marshaling**. Bạn sẽ học cách làm điều này trong phần `encoding/json`.
+
+Trường hợp thứ hai là khi viết test. Bạn sẽ sử dụng slice của các anonymous struct khi viết **table-driven tests** trong Chapter 15.
+
+---
+
+### So sánh và Chuyển đổi Struct
+
+Một struct có thể so sánh được hay không phụ thuộc vào các field của nó. Struct mà tất cả các field đều là kiểu có thể so sánh thì bản thân struct đó cũng có thể so sánh. Ngược lại, struct có field là slice hoặc map thì không thể so sánh (như bạn sẽ thấy ở các chương sau, field kiểu function hoặc channel cũng khiến struct không thể so sánh).
+
+Khác với Python hay Ruby, Go không có “phương thức ma thuật” nào cho phép bạn định nghĩa lại cách so sánh bằng nhau để `==` và `!=` hoạt động với các struct không thể so sánh. Dĩ nhiên, bạn vẫn có thể tự viết hàm để so sánh struct theo ý mình.
+
+Tương tự như việc Go không cho phép so sánh giữa các kiểu nguyên thủy khác nhau, Go cũng không cho phép so sánh giữa các biến thuộc **hai kiểu struct khác nhau**. Tuy nhiên, Go cho phép bạn **chuyển kiểu (type conversion)** từ một kiểu struct sang kiểu struct khác nếu các field của chúng có **cùng tên, cùng thứ tự và cùng kiểu**.
+
+Ví dụ, với struct sau:
+
+```go
+type firstPerson struct {
+    name string
+    age  int
+}
+```
+
+bạn có thể chuyển một instance của `firstPerson` sang `secondPerson`, nhưng bạn **không thể** dùng `==` để so sánh một instance của `firstPerson` và một instance của `secondPerson`, vì chúng là hai kiểu khác nhau:
+
+```go
+type secondPerson struct {
+    name string
+    age  int
+}
+```
+
+Bạn không thể chuyển một instance của `firstPerson` sang `thirdPerson`, vì thứ tự các field khác nhau:
+
+```go
+type thirdPerson struct {
+    age  int
+    name string
+}
+```
+
+Bạn cũng không thể chuyển sang `fourthPerson`, vì tên field không khớp:
+
+```go
+type fourthPerson struct {
+    firstName string
+    age       int
+}
+```
+
+Cuối cùng, bạn không thể chuyển sang `fifthPerson`, vì có thêm một field mới:
+
+```go
+type fifthPerson struct {
+    name          string
+    age           int
+    favoriteColor string
+}
+```
+
+Anonymous struct có một điểm đặc biệt: nếu hai biến struct được so sánh và **ít nhất một trong hai** là anonymous struct, bạn có thể so sánh chúng **mà không cần chuyển kiểu**, miễn là các field của cả hai struct có cùng tên, cùng thứ tự và cùng kiểu. Bạn cũng có thể gán giá trị qua lại giữa struct có tên và anonymous struct trong cùng điều kiện đó:
+
+```go
+type firstPerson struct {
+    name string
+    age  int
+}
+f := firstPerson{
+    name: "Bob",
+    age:  50,
+}
+var g struct {
+    name string
+    age  int
+}
+
+// biên dịch được — có thể dùng = và == giữa struct có tên và anonymous struct giống hệt nhau
+g = f
+fmt.Println(f == g)
+```
+
+---
+
+### Bài tập
+
+Các bài tập sau sẽ kiểm tra kiến thức của bạn về các kiểu dữ liệu composite trong Go. Bạn có thể tìm lời giải trong thư mục `exercise_solutions` của Chapter 3 Repository.
+
+1. Viết một chương trình định nghĩa một biến tên `greetings` có kiểu là slice các chuỗi, với các giá trị sau:
+   `"Hello"`, `"Hola"`, `"नमस्कार"`, `"こんにちは"`, và `"Привіт"`.
+   Tạo:
+
+   * một subslice chứa hai giá trị đầu tiên,
+   * một subslice thứ hai chứa giá trị thứ hai, thứ ba và thứ tư,
+   * một subslice thứ ba chứa giá trị thứ tư và thứ năm.
+     In ra cả bốn slice.
+
+2. Viết một chương trình định nghĩa một biến chuỗi tên `message` với giá trị `"Hi 🌍"` và in ra **rune thứ tư** trong chuỗi này dưới dạng **ký tự**, không phải số.
+
+3. Viết một chương trình định nghĩa một struct tên `Employee` với ba field: `firstName`, `lastName`, và `id`.
+   Hai field đầu có kiểu `string`, field cuối (`id`) có kiểu `int`.
+   Tạo ba instance của struct này với các giá trị tùy ý:
+
+   * Instance thứ nhất được khởi tạo bằng struct literal **không dùng tên field**
+   * Instance thứ hai được khởi tạo bằng struct literal **có dùng tên field**
+   * Instance thứ ba được khai báo bằng `var`, sau đó dùng ký hiệu dấu chấm để gán giá trị cho các field
+     In ra cả ba struct.
+
+---
+
+### Tổng kết
+
+Bạn đã học được rất nhiều về các kiểu dữ liệu composite trong Go. Ngoài việc hiểu rõ hơn về string, bạn còn biết cách sử dụng các kiểu container dựng sẵn có hỗ trợ generic: slice và map. Bạn cũng đã biết cách tự xây dựng các kiểu dữ liệu composite của riêng mình thông qua struct.
+
+Trong chương tiếp theo, bạn sẽ tìm hiểu về các cấu trúc điều khiển trong Go: `for`, `if/else`, và `switch`. Bạn cũng sẽ học cách Go tổ chức code thành các block, và cách các mức block khác nhau có thể dẫn đến những hành vi bất ngờ.
